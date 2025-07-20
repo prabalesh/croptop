@@ -40,8 +40,7 @@ func (s *StatsCollector) GetSystemStats() models.SystemStats {
 
 func (s *StatsCollector) getCPUStats() models.CPUStats {
 	// Read CPU info
-	model := s.getCPUModel()
-	frequency := s.getCPUFrequency()
+	model, frequency := s.getCPUInfo()
 	temp := s.getCPUTemperature()
 
 	// Read CPU usage from /proc/stat
@@ -56,43 +55,32 @@ func (s *StatsCollector) getCPUStats() models.CPUStats {
 	}
 }
 
-func (s *StatsCollector) getCPUModel() string {
+func (s *StatsCollector) getCPUInfo() (string, float64) {
 	content, err := os.ReadFile("/proc/cpuinfo")
 	if err != nil {
-		return "Unknown CPU"
+		return "Unknown CPU", 0
 	}
 
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
+	modelName := "Unknown CPU"
+	freq := 0.0
+	for _, line := range strings.Split(string(content), "\n") {
 		if strings.HasPrefix(line, "model name") {
-			parts := strings.Split(line, ":")
-			if len(parts) > 1 {
-				return strings.TrimSpace(parts[1])
+			if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
+				modelName = strings.TrimSpace(parts[1])
 			}
-		}
-	}
-	return "Unknown CPU"
-}
-
-func (s *StatsCollector) getCPUFrequency() float64 {
-	content, err := os.ReadFile("/proc/cpuinfo")
-	if err != nil {
-		return 0
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(line, "cpu MHz") {
-			parts := strings.Split(line, ":")
-			if len(parts) > 1 {
-				freq, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
-				if err == nil {
-					return freq
+		} else if strings.HasPrefix(line, "cpu MHz") {
+			if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
+				if f, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64); err == nil {
+					freq = f
 				}
 			}
 		}
+		if modelName != "Unknown CPU" && freq != 0.0 {
+			break
+		}
 	}
-	return 0
+
+	return modelName, freq
 }
 
 func (s *StatsCollector) getCPUTemperature() float64 {
