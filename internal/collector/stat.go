@@ -2,7 +2,7 @@ package collector
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -57,7 +57,7 @@ func (s *StatsCollector) getCPUStats() models.CPUStats {
 }
 
 func (s *StatsCollector) getCPUModel() string {
-	content, err := ioutil.ReadFile("/proc/cpuinfo")
+	content, err := os.ReadFile("/proc/cpuinfo")
 	if err != nil {
 		return "Unknown CPU"
 	}
@@ -75,7 +75,7 @@ func (s *StatsCollector) getCPUModel() string {
 }
 
 func (s *StatsCollector) getCPUFrequency() float64 {
-	content, err := ioutil.ReadFile("/proc/cpuinfo")
+	content, err := os.ReadFile("/proc/cpuinfo")
 	if err != nil {
 		return 0
 	}
@@ -104,7 +104,7 @@ func (s *StatsCollector) getCPUTemperature() float64 {
 	}
 
 	for _, path := range tempPaths {
-		if content, err := ioutil.ReadFile(path); err == nil {
+		if content, err := os.ReadFile(path); err == nil {
 			if temp, err := strconv.ParseFloat(strings.TrimSpace(string(content)), 64); err == nil {
 				// Temperature is usually in millidegrees
 				if temp > 1000 {
@@ -118,7 +118,7 @@ func (s *StatsCollector) getCPUTemperature() float64 {
 }
 
 func (s *StatsCollector) getCPUUsage() (float64, []float64) {
-	content, err := ioutil.ReadFile("/proc/stat")
+	content, err := os.ReadFile("/proc/stat")
 	if err != nil {
 		return 0, nil
 	}
@@ -178,7 +178,7 @@ func (s *StatsCollector) parseCPULine(line string) float64 {
 }
 
 func (s *StatsCollector) getMemoryStats() models.MemoryStats {
-	content, err := ioutil.ReadFile("/proc/meminfo")
+	content, err := os.ReadFile("/proc/meminfo")
 	if err != nil {
 		return models.MemoryStats{}
 	}
@@ -221,7 +221,7 @@ func (s *StatsCollector) getMemoryStats() models.MemoryStats {
 }
 
 func (s *StatsCollector) getNetworkStats() models.NetworkStats {
-	content, err := ioutil.ReadFile("/proc/net/dev")
+	content, err := os.ReadFile("/proc/net/dev")
 	if err != nil {
 		return models.NetworkStats{}
 	}
@@ -282,7 +282,7 @@ func (s *StatsCollector) getNetworkStats() models.NetworkStats {
 
 func (s *StatsCollector) getInterfaceStatus(name string) string {
 	operstatePath := fmt.Sprintf("/sys/class/net/%s/operstate", name)
-	if content, err := ioutil.ReadFile(operstatePath); err == nil {
+	if content, err := os.ReadFile(operstatePath); err == nil {
 		return strings.TrimSpace(string(content))
 	}
 	return "unknown"
@@ -290,7 +290,7 @@ func (s *StatsCollector) getInterfaceStatus(name string) string {
 
 func (s *StatsCollector) getInterfaceSpeed(name string) string {
 	speedPath := fmt.Sprintf("/sys/class/net/%s/speed", name)
-	if content, err := ioutil.ReadFile(speedPath); err == nil {
+	if content, err := os.ReadFile(speedPath); err == nil {
 		if speed, err := strconv.Atoi(strings.TrimSpace(string(content))); err == nil {
 			return fmt.Sprintf("%d Mb/s", speed)
 		}
@@ -299,7 +299,7 @@ func (s *StatsCollector) getInterfaceSpeed(name string) string {
 }
 
 func (s *StatsCollector) getDiskStats() []models.DiskStats {
-	content, err := ioutil.ReadFile("/proc/mounts")
+	content, err := os.ReadFile("/proc/mounts")
 	if err != nil {
 		return nil
 	}
@@ -363,7 +363,7 @@ func (s *StatsCollector) getDiskIO(device string) (uint64, uint64, uint64, uint6
 		deviceName = deviceName[:3] // Get base device name
 	}
 
-	content, err := ioutil.ReadFile("/proc/diskstats")
+	content, err := os.ReadFile("/proc/diskstats")
 	if err != nil {
 		return 0, 0, 0, 0
 	}
@@ -433,7 +433,7 @@ func (s *StatsCollector) getBatteryStats() models.BatteryStats {
 }
 
 func (s *StatsCollector) readBatteryInt(path string) int {
-	if content, err := ioutil.ReadFile(path); err == nil {
+	if content, err := os.ReadFile(path); err == nil {
 		if val, err := strconv.Atoi(strings.TrimSpace(string(content))); err == nil {
 			return val
 		}
@@ -442,7 +442,7 @@ func (s *StatsCollector) readBatteryInt(path string) int {
 }
 
 func (s *StatsCollector) readBatteryString(path string) string {
-	if content, err := ioutil.ReadFile(path); err == nil {
+	if content, err := os.ReadFile(path); err == nil {
 		return strings.TrimSpace(string(content))
 	}
 	return "Unknown"
@@ -463,7 +463,7 @@ func (s *StatsCollector) getBatteryHealth(batteryDir string) int {
 }
 
 func (s *StatsCollector) GetProcessList() models.ProcessList {
-	entries, err := ioutil.ReadDir("/proc")
+	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return models.ProcessList{}
 	}
@@ -512,7 +512,7 @@ func (s *StatsCollector) GetProcessList() models.ProcessList {
 func (s *StatsCollector) getProcessInfo(pid int) models.Process {
 	// Read /proc/[pid]/stat for basic info
 	statPath := fmt.Sprintf("/proc/%d/stat", pid)
-	statContent, err := ioutil.ReadFile(statPath)
+	statContent, err := os.ReadFile(statPath)
 	if err != nil {
 		return models.Process{}
 	}
@@ -524,7 +524,7 @@ func (s *StatsCollector) getProcessInfo(pid int) models.Process {
 
 	// Read /proc/[pid]/status for additional info
 	statusPath := fmt.Sprintf("/proc/%d/status", pid)
-	statusContent, err := ioutil.ReadFile(statusPath)
+	statusContent, err := os.ReadFile(statusPath)
 	if err != nil {
 		return models.Process{}
 	}
@@ -568,7 +568,7 @@ func (s *StatsCollector) getProcessName(statusContent []byte) string {
 
 func (s *StatsCollector) getProcessUser(pid int) string {
 	statusPath := fmt.Sprintf("/proc/%d/status", pid)
-	content, err := ioutil.ReadFile(statusPath)
+	content, err := os.ReadFile(statusPath)
 	if err != nil {
 		return "unknown"
 	}
@@ -589,7 +589,7 @@ func (s *StatsCollector) getProcessUser(pid int) string {
 
 func (s *StatsCollector) getProcessCommand(pid int) string {
 	cmdlinePath := fmt.Sprintf("/proc/%d/cmdline", pid)
-	content, err := ioutil.ReadFile(cmdlinePath)
+	content, err := os.ReadFile(cmdlinePath)
 	if err != nil {
 		return "unknown"
 	}
@@ -681,7 +681,7 @@ func (s *StatsCollector) getProcessPriority(statFields []string) int {
 }
 
 func (s *StatsCollector) getSystemBootTime() uint64 {
-	content, err := ioutil.ReadFile("/proc/stat")
+	content, err := os.ReadFile("/proc/stat")
 	if err != nil {
 		return 0
 	}
@@ -701,7 +701,7 @@ func (s *StatsCollector) getSystemBootTime() uint64 {
 }
 
 func getBootTime() time.Time {
-	content, err := ioutil.ReadFile("/proc/stat")
+	content, err := os.ReadFile("/proc/stat")
 	if err != nil {
 		return time.Now()
 	}
