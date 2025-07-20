@@ -502,7 +502,7 @@ func (a *App) renderMemory() string {
 		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Free:"), float64(mem.Free)/(1024*1024*1024)),
 		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Available:"), float64(mem.Available)/(1024*1024*1024)),
 		"",
-		fmt.Sprintf("%s %.1f%%", LabelStyle.Render("Usage:"), mem.UsagePercent),
+		fmt.Sprintf("%s %.1f%% (%.1f GB/%.1f GB)", LabelStyle.Render("Usage:"), mem.UsagePercent, a.stats.Memory.Used/(1024*1024*1024), a.stats.Memory.Total/(1024*1024*1024)),
 		a.memoryProgress.ViewAs(mem.UsagePercent / 100.0),
 		"",
 		HeaderStyle.Render("Swap"),
@@ -640,23 +640,8 @@ func (a *App) renderNetwork() string {
 			fmt.Sprintf("%s %.1f MB", LabelStyle.Render("TX:"), float64(iface.TxBytes)/(1024*1024)),
 			fmt.Sprintf("%s %d", LabelStyle.Render("RX Packets:"), iface.RxPackets),
 			fmt.Sprintf("%s %d", LabelStyle.Render("TX Packets:"), iface.TxPackets),
-			"",
 		)
 	}
-
-	// Add extra content for scrolling demo
-	content = append(content,
-		HeaderStyle.Render("Network Statistics"),
-		"Connection details...",
-		"Active connections by protocol...",
-		"Network error rates...",
-		"Bandwidth utilization over time...",
-		"",
-		HeaderStyle.Render("Firewall Status"),
-		"Active firewall rules...",
-		"Blocked connection attempts...",
-		"Port usage statistics...",
-	)
 
 	return BaseStyle.Width(a.width - 4).Render(
 		lipgloss.JoinVertical(lipgloss.Left, content...),

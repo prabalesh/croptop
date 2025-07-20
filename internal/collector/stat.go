@@ -171,14 +171,14 @@ func (s *StatsCollector) getMemoryStats() models.MemoryStats {
 		return models.MemoryStats{}
 	}
 
-	memInfo := make(map[string]uint64)
+	memInfo := make(map[string]float64)
 	lines := strings.Split(string(content), "\n")
 
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) >= 2 {
 			key := strings.TrimSuffix(fields[0], ":")
-			value, err := strconv.ParseUint(fields[1], 10, 64)
+			value, err := strconv.ParseFloat(fields[1], 64)
 			if err == nil {
 				memInfo[key] = value * 1024 // Convert from KB to bytes
 			}

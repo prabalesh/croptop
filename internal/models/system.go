@@ -20,13 +20,13 @@ type CPUStats struct {
 }
 
 type MemoryStats struct {
-	Total        uint64  `json:"total"`
-	Used         uint64  `json:"used"`
-	Free         uint64  `json:"free"`
-	Available    uint64  `json:"available"`
+	Total        float64 `json:"total"`
+	Used         float64 `json:"used"`
+	Free         float64 `json:"free"`
+	Available    float64 `json:"available"`
 	UsagePercent float64 `json:"usage_percent"`
-	SwapTotal    uint64  `json:"swap_total"`
-	SwapUsed     uint64  `json:"swap_used"`
+	SwapTotal    float64 `json:"swap_total"`
+	SwapUsed     float64 `json:"swap_used"`
 }
 
 type BatteryStats struct {
