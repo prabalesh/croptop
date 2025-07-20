@@ -188,9 +188,9 @@ func (s *StatsCollector) getMemoryStats() models.MemoryStats {
 	total := memInfo["MemTotal"]
 	free := memInfo["MemFree"]
 	available := memInfo["MemAvailable"]
-	buffers := memInfo["Buffers"]
-	cached := memInfo["Cached"]
-	used := total - free - buffers - cached
+	// buffers := memInfo["Buffers"]
+	// cached := memInfo["Cached"]
+	used := total - available
 
 	var usagePercent float64
 	if total > 0 {
