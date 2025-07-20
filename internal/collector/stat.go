@@ -620,16 +620,16 @@ func (s *StatsCollector) getProcessMemory(statusContent []byte) (float64, uint64
 	for _, line := range lines {
 		if strings.HasPrefix(line, "VmRSS:") {
 			fields := strings.Fields(line)
-			if len(fields) > 1 {
+			if len(fields) >= 2 {
 				if val, err := strconv.ParseUint(fields[1], 10, 64); err == nil {
 					rss = val * 1024 // Convert from KB to bytes
-					break
 				}
 			}
+			break
 		}
 	}
 
-	// Calculate memory percentage
+	// Calculate memory percentage: (RSS / MemTotal) * 100
 	memStats := s.getMemoryStats()
 	var memPercent float64
 	if memStats.Total > 0 {
