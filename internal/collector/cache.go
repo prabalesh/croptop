@@ -30,7 +30,7 @@ type CPUCache struct {
 	frequencyTime time.Time
 
 	// Temperature cache (changes frequently but can be cached briefly)
-	temperature     float64
+	temperature     float32
 	temperatureTime time.Time
 
 	// CPU usage previous readings
@@ -103,13 +103,13 @@ func (c *CPUCache) SetCachedFrequency(frequency float64) {
 	c.frequencyTime = time.Now()
 }
 
-func (c *CPUCache) GetCachedTemperature() float64 {
+func (c *CPUCache) GetCachedTemperature() float32 {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.temperature
 }
 
-func (c *CPUCache) SetCachedTemperature(temp float64) {
+func (c *CPUCache) SetCachedTemperature(temp float32) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.temperature = temp
