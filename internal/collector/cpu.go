@@ -53,7 +53,7 @@ func (s *StatsCollector) getCPUInfo() (string, float64) {
 	return modelName, freq
 }
 
-func (s *StatsCollector) getCPUTemperature() float64 {
+func (s *StatsCollector) getCPUTemperature() float32 {
 	// Try different temperature sensor paths
 	tempPaths := []string{
 		"/sys/class/thermal/thermal_zone0/temp",
@@ -64,11 +64,12 @@ func (s *StatsCollector) getCPUTemperature() float64 {
 	for _, path := range tempPaths {
 		if content, err := os.ReadFile(path); err == nil {
 			if temp, err := strconv.ParseFloat(strings.TrimSpace(string(content)), 64); err == nil {
+				temp32 := float32(temp)
 				// Temperature is usually in millidegrees
-				if temp > 1000 {
-					return temp / 1000.0
+				if temp32 > 1000 {
+					return temp32 / 1000.0
 				}
-				return temp
+				return temp32
 			}
 		}
 	}

@@ -15,7 +15,7 @@ type CPUStats struct {
 	Usage     float64   `json:"usage"`
 	Cores     []float64 `json:"cores"`
 	Frequency float64   `json:"frequency"`
-	Temp      float64   `json:"temperature"`
+	Temp      float32   `json:"temperature"`
 	Model     string    `json:"model"`
 }
 
