@@ -168,3 +168,9 @@ func (c *CPUCache) GetTimeSinceLastUsageUpdate() time.Duration {
 	defer c.mutex.RUnlock()
 	return time.Since(c.previousTime)
 }
+
+func (c *CPUCache) HasPreviousStats() bool {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return len(c.previousStats) > 0
+}
