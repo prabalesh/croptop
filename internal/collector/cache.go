@@ -9,7 +9,7 @@ import (
 const (
 	ModelCacheDuration       = 24 * time.Hour
 	FrequencyCacheDuration   = 30 * time.Second
-	TemperatureCacheDuration = 5 * time.Second
+	TemperatureCacheDuration = 6 * time.Second
 	UsageCacheDuration       = 1 * time.Second
 )
 
