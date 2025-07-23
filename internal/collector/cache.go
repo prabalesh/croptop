@@ -55,7 +55,7 @@ func (c *CPUCache) IsModelCacheValid() bool {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	return c.model == "" && time.Since(c.modelTime) < ModelCacheDuration
+	return c.model != "" && time.Since(c.modelTime) < ModelCacheDuration
 }
 
 func (c *CPUCache) IsFrequencyCacheValid() bool {

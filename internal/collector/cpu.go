@@ -10,7 +10,7 @@ import (
 
 func (s *StatsCollector) getCPUStats() models.CPUStats {
 	// Read CPU info
-	model, frequency := s.getCPUInfo()
+	model, frequency := s.getCPUCachedInfo()
 	temp := s.getCPUTemperature()
 
 	// Read CPU usage from /proc/stat
@@ -23,6 +23,26 @@ func (s *StatsCollector) getCPUStats() models.CPUStats {
 		Temp:      temp,
 		Model:     model,
 	}
+}
+
+func (s *StatsCollector) getCPUCachedInfo() (string, float64) {
+	if s.cpuCache.IsModelCacheValid() {
+		model, freq := s.cpuCache.GetCachedModel()
+
+		if s.cpuCache.IsFrequencyCacheValid() {
+			return model, freq
+		}
+
+		_, freshFreq := s.getCPUInfo()
+		s.cpuCache.SetCachedFrequency(freshFreq)
+		return model, freshFreq
+	}
+
+	model, freq := s.getCPUInfo()
+	s.cpuCache.SetCachedModel(model)
+	s.cpuCache.SetCachedFrequency(freq)
+
+	return model, freq
 }
 
 func (s *StatsCollector) getCPUInfo() (string, float64) {
