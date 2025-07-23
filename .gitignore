@@ -1,0 +1,53 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output of the go coverage tool
+*.coverprofile
+
+# Temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Dependency directories (if using vendoring)
+vendor/
+
+# IDE/editor directories and files
+.vscode/
+.idea/
+*.iml
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Go workspace file (Go 1.18+)
+go.work
+go.work.sum
+
+# Build artifacts and cache
+bin/
+build/
+dist/
+*.a
+
+# Module cache (can be regenerated)
+pkg/mod/
+
+# Test binary data
+testdata/
+
+# Go race detector files
+*.race
+
+# Coverage files
+coverage.out
+
+test.go
