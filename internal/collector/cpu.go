@@ -14,7 +14,7 @@ func (s *StatsCollector) getCPUStats() models.CPUStats {
 	temp := s.getCachedTemperature()
 
 	// Read CPU usage from /proc/stat
-	usage, cores := s.getCPUUsage()
+	usage, cores := s.getCachedCPUUsage()
 
 	return models.CPUStats{
 		Usage:     usage,
@@ -105,62 +105,124 @@ func (s *StatsCollector) getCPUTemperature() float32 {
 	return 0
 }
 
-func (s *StatsCollector) getCPUUsage() (float64, []float64) {
-	content, err := os.ReadFile("/proc/stat")
-	if err != nil {
-		return 0, nil
+func (s *StatsCollector) getCachedCPUUsage() (float64, []float64) {
+	// Check if usage is cached and valid
+	if s.cpuCache.IsUsageCacheValid() {
+		return s.cpuCache.GetCachedUsage()
 	}
 
-	lines := strings.Split(string(content), "\n")
-	var overallUsage float64
-	var coreUsages []float64
+	// Get current CPU stats
+	currentStats := s.getCurrentCPUStats()
 
-	for _, line := range lines {
-		if strings.HasPrefix(line, "cpu ") {
-			// Overall CPU usage
-			overallUsage = s.parseCPULine(line)
-		} else if strings.HasPrefix(line, "cpu") && len(line) > 3 {
-			// Individual core usage
-			usage := s.parseCPULine(line)
-			coreUsages = append(coreUsages, usage)
+	// If we don't have previous stats, store current and return zero
+	if !s.cpuCache.HasPreviousStats() {
+		s.cpuCache.SetPreviousStats(currentStats)
+		coreCount := len(currentStats) - 1 // -1 because "cpu" is overall
+
+		// if the core count comes to be negative it returns 0
+		coreCount = max(coreCount, 0)
+
+		return 0, make([]float64, coreCount)
+	}
+
+	// Get previous stats for comparison
+	previousStats, _ := s.cpuCache.GetPreviousStats()
+
+	// Check if enough time has passed for accurate calculation
+	timeDiff := s.cpuCache.GetTimeSinceLastUsageUpdate().Seconds()
+	if timeDiff < 0.1 { // Too small time difference
+		return s.cpuCache.GetCachedUsage()
+	}
+
+	// Calculate usage based on difference
+	overallUsage := s.calculateUsage(previousStats["cpu"], currentStats["cpu"])
+
+	var coreUsages []float64
+	for key, current := range currentStats {
+		if strings.HasPrefix(key, "cpu") && key != "cpu" {
+			previous, exists := previousStats[key]
+			if exists {
+				usage := s.calculateUsage(previous, current)
+				coreUsages = append(coreUsages, usage)
+			}
 		}
 	}
+
+	// Update cache with new data
+	s.cpuCache.SetPreviousStats(currentStats)
+	s.cpuCache.SetCachedUsage(overallUsage, coreUsages)
 
 	return overallUsage, coreUsages
 }
 
-func (s *StatsCollector) parseCPULine(line string) float64 {
-	fields := strings.Fields(line)
-	if len(fields) < 5 {
-		return 0
+func (s *StatsCollector) getCurrentCPUStats() map[string]CPUTimes {
+	content, err := os.ReadFile("/proc/stat")
+	if err != nil {
+		return nil
 	}
 
-	// Parse CPU times: user, nice, system, idle, iowait, irq, softirq
+	stats := make(map[string]CPUTimes)
+	lines := strings.Split(string(content), "\n")
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "cpu") {
+			fields := strings.Fields(line)
+			if len(fields) < 5 {
+				continue
+			}
+
+			times := s.parseCPUTimes(fields[1:])
+			if times.Total > 0 {
+				// field[0] => cpu name
+				stats[fields[0]] = times
+			}
+		}
+	}
+
+	return stats
+}
+
+func (s *StatsCollector) parseCPUTimes(fields []string) CPUTimes {
 	var times []uint64
-	for i := 1; i < len(fields) && i < 8; i++ {
+	for i := 0; i < len(fields) && i < 7; i++ {
 		if val, err := strconv.ParseUint(fields[i], 10, 64); err == nil {
 			times = append(times, val)
 		}
 	}
 
 	if len(times) < 4 {
-		return 0
+		return CPUTimes{}
 	}
 
-	// Calculate total and idle time
 	var total, idle uint64
 	for i, time := range times {
 		total += time
-		if i == 3 { // idle time is at index 3
-			idle = time
+		if i == 3 || i == 4 { // idle time is at index 3
+			idle += time
 		}
 	}
 
-	if total == 0 {
+	return CPUTimes{
+		Total: total,
+		Idle:  idle,
+	}
+}
+
+func (s *StatsCollector) calculateUsage(previous, current CPUTimes) float64 {
+	totalDiff := current.Total - previous.Total
+	idleDiff := current.Idle - previous.Idle
+
+	if totalDiff == 0 {
 		return 0
 	}
 
-	// Calculate usage percentage
-	usage := float64(total-idle) / float64(total) * 100
+	usage := 100 * float64(totalDiff-idleDiff) / float64(totalDiff)
+	if usage < 0 {
+		usage = 0
+	}
+	if usage > 100 {
+		usage = 100
+	}
+
 	return usage
 }
