@@ -13,6 +13,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+var KBToGB float64 = 1048576
+
 type tickMsg time.Time
 
 type App struct {
@@ -438,7 +440,7 @@ func (a *App) renderOverview() string {
 	cpuBar := a.cpuProgress.ViewAs(a.stats.CPU.Usage / 100.0)
 	memBar := a.memoryProgress.ViewAs(a.stats.Memory.UsagePercent / 100.0)
 
-	return BaseStyle.Width(a.width - 4).Render(
+	return BaseStyle.Width(a.width-4).Render(
 		lipgloss.JoinVertical(lipgloss.Left,
 			HeaderStyle.Render("System Overview"),
 			"",
@@ -455,10 +457,9 @@ func (a *App) renderOverview() string {
 			HeaderStyle.Render("Quick Stats"),
 			fmt.Sprintf("CPU Temperature: %.1f°C", a.stats.CPU.Temp),
 			fmt.Sprintf("CPU Cores: %d", len(a.stats.CPU.Cores)),
-			fmt.Sprintf("Memory Total: %.1f GB", float64(a.stats.Memory.Total)/(1024*1024*1024)),
-			"Disk Usage: Multiple drives",
-			fmt.Sprintf("Network Interfaces: %d", len(a.stats.Network.Interfaces)),
-		),
+			fmt.Sprintf("Memory Total: %.1f GB", float64(a.stats.Memory.Total)/float64(KBToGB))),
+		"Disk Usage: Multiple drives",
+		fmt.Sprintf("Network Interfaces: %d", len(a.stats.Network.Interfaces)),
 	)
 }
 
@@ -497,17 +498,17 @@ func (a *App) renderMemory() string {
 	content := []string{
 		HeaderStyle.Render("Memory Information"),
 		"",
-		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Total:"), float64(mem.Total)/(1024*1024*1024)),
-		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Used:"), float64(mem.Used)/(1024*1024*1024)),
-		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Free:"), float64(mem.Free)/(1024*1024*1024)),
-		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Available:"), float64(mem.Available)/(1024*1024*1024)),
+		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Total:"), mem.Total/KBToGB),
+		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Used:"), mem.Used/KBToGB),
+		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Free:"), mem.Free/KBToGB),
+		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Available:"), mem.Available/KBToGB),
 		"",
-		fmt.Sprintf("%s %.1f%% (%.1f GB/%.1f GB)", LabelStyle.Render("Usage:"), mem.UsagePercent, a.stats.Memory.Used/(1024*1024*1024), a.stats.Memory.Total/(1024*1024*1024)),
+		fmt.Sprintf("%s %.1f%% (%.1f GB/%.1f GB)", LabelStyle.Render("Usage:"), mem.UsagePercent, a.stats.Memory.Used/KBToGB, a.stats.Memory.Total/KBToGB),
 		a.memoryProgress.ViewAs(mem.UsagePercent / 100.0),
 		"",
 		HeaderStyle.Render("Swap"),
-		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Total:"), float64(mem.SwapTotal)/(1024*1024*1024)),
-		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Used:"), float64(mem.SwapUsed)/(1024*1024*1024)),
+		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Total:"), mem.SwapTotal/KBToGB),
+		fmt.Sprintf("%s %.1f GB", LabelStyle.Render("Used:"), mem.SwapUsed/KBToGB),
 	}
 
 	return BaseStyle.Width(a.width - 4).Render(
