@@ -23,7 +23,7 @@ const (
 
 // GetProcessList returns unsorted process list (maintains backward compatibility)
 func (s *StatsCollector) GetProcessList() models.ProcessList {
-	return s.GetProcessListSorted(SortByMemory, true)
+	return s.GetProcessListSorted(SortByCPU, true)
 }
 
 // GetProcessListSorted returns process list sorted by specified criteria
@@ -215,18 +215,70 @@ func (s *StatsCollector) getProcessCommand(pid int) string {
 }
 
 func (s *StatsCollector) getProcessCPUPercent(statFields []string) float64 {
-	// This is a simplified CPU calculation
-	// For accurate CPU usage, you'd need to track changes over time
-	if len(statFields) > 15 {
-		utime, _ := strconv.ParseUint(statFields[13], 10, 64)
-		stime, _ := strconv.ParseUint(statFields[14], 10, 64)
-
-		// Simple approximation - in a real implementation you'd track
-		// the difference over time and divide by elapsed time
-		totalTime := utime + stime
-		return float64(totalTime) / 100000.0 // Rough approximation
+	// More accurate CPU calculation similar to htop
+	if len(statFields) < 22 {
+		return 0
 	}
-	return 0
+
+	utime, _ := strconv.ParseUint(statFields[13], 10, 64)
+	stime, _ := strconv.ParseUint(statFields[14], 10, 64)
+	starttime, _ := strconv.ParseUint(statFields[21], 10, 64)
+
+	// Read system uptime and total CPU time
+	uptimeContent, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return 0
+	}
+
+	statContent, err := os.ReadFile("/proc/stat")
+	if err != nil {
+		return 0
+	}
+
+	// Parse uptime
+	uptimeFields := strings.Fields(string(uptimeContent))
+	if len(uptimeFields) < 1 {
+		return 0
+	}
+	uptime, _ := strconv.ParseFloat(uptimeFields[0], 64)
+
+	// Parse total CPU time from first line of /proc/stat
+	statLines := strings.Split(string(statContent), "\n")
+	if len(statLines) < 1 {
+		return 0
+	}
+
+	cpuLine := strings.Fields(statLines[0])
+	if len(cpuLine) < 8 || cpuLine[0] != "cpu" {
+		return 0
+	}
+
+	// Sum all CPU times to get total system CPU time
+	var totalSystemCPU uint64
+	for i := 1; i < len(cpuLine) && i < 8; i++ {
+		val, _ := strconv.ParseUint(cpuLine[i], 10, 64)
+		totalSystemCPU += val
+	}
+
+	// Calculate process CPU time in seconds
+	processCPUTime := float64(utime+stime) / 100.0
+
+	// Calculate process runtime in seconds
+	processRuntime := uptime - (float64(starttime) / 100.0)
+	if processRuntime <= 0 {
+		return 0
+	}
+
+	// Calculate CPU usage as percentage of single core
+	// This gives a more realistic percentage similar to htop
+	cpuUsage := (processCPUTime / processRuntime) * 100.0
+
+	// Cap at 100% per core (htop style)
+	if cpuUsage > 100.0 {
+		cpuUsage = 100.0
+	}
+
+	return cpuUsage
 }
 
 func (s *StatsCollector) getProcessMemory(statusContent []byte) (float64, uint64) {
