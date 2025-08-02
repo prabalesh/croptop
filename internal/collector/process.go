@@ -3,6 +3,7 @@ package collector
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -10,7 +11,23 @@ import (
 	"github.com/prabalesh/croptop/internal/models"
 )
 
+// SortBy represents different sorting options
+type SortBy int
+
+const (
+	SortByPID SortBy = iota
+	SortByCPU
+	SortByMemory
+	SortByName
+)
+
+// GetProcessList returns unsorted process list (maintains backward compatibility)
 func (s *StatsCollector) GetProcessList() models.ProcessList {
+	return s.GetProcessListSorted(SortByMemory, true)
+}
+
+// GetProcessListSorted returns process list sorted by specified criteria
+func (s *StatsCollector) GetProcessListSorted(sortBy SortBy, descending bool) models.ProcessList {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return models.ProcessList{}
@@ -46,6 +63,9 @@ func (s *StatsCollector) GetProcessList() models.ProcessList {
 		}
 	}
 
+	// Sort processes based on criteria
+	s.sortProcesses(processes, sortBy, descending)
+
 	total = len(processes)
 
 	return models.ProcessList{
@@ -54,6 +74,42 @@ func (s *StatsCollector) GetProcessList() models.ProcessList {
 		Running:   running,
 		Sleeping:  sleeping,
 		Zombie:    zombie,
+	}
+}
+
+// sortProcesses sorts the process slice based on the specified criteria
+func (s *StatsCollector) sortProcesses(processes []models.Process, sortBy SortBy, descending bool) {
+	switch sortBy {
+	case SortByCPU:
+		sort.Slice(processes, func(i, j int) bool {
+			if descending {
+				return processes[i].CPUPercent > processes[j].CPUPercent
+			}
+			return processes[i].CPUPercent < processes[j].CPUPercent
+		})
+	case SortByMemory:
+		sort.Slice(processes, func(i, j int) bool {
+			if descending {
+				return processes[i].MemPercent > processes[j].MemPercent
+			}
+			return processes[i].MemPercent < processes[j].MemPercent
+		})
+	case SortByName:
+		sort.Slice(processes, func(i, j int) bool {
+			if descending {
+				return processes[i].Name > processes[j].Name
+			}
+			return processes[i].Name < processes[j].Name
+		})
+	case SortByPID:
+		fallthrough
+	default:
+		sort.Slice(processes, func(i, j int) bool {
+			if descending {
+				return processes[i].PID > processes[j].PID
+			}
+			return processes[i].PID < processes[j].PID
+		})
 	}
 }
 
@@ -182,7 +238,7 @@ func (s *StatsCollector) getProcessMemory(statusContent []byte) (float64, uint64
 			fields := strings.Fields(line)
 			if len(fields) >= 2 {
 				if val, err := strconv.ParseUint(fields[1], 10, 64); err == nil {
-					rss = val * 1024 // Convert from KB to bytes
+					rss = val
 				}
 			}
 			break
@@ -191,6 +247,8 @@ func (s *StatsCollector) getProcessMemory(statusContent []byte) (float64, uint64
 
 	// Calculate memory percentage: (RSS / MemTotal) * 100
 	memStats := s.getMemoryStats()
+	// fmt.Println(memStats.Total)
+	// fmt.Println(rss)
 	var memPercent float64
 	if memStats.Total > 0 {
 		memPercent = float64(rss) / float64(memStats.Total) * 100
